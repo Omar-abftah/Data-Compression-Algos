@@ -18,5 +18,21 @@ def compress(s):
         arr.append((dic[st[:-1]], st[-1]))
     return arr
 
-ans = compress("ABAABABAAABA")
+def decompression(arr):
+    st = ''
+    dic = {0:''}
+    start = 1
+    for data in arr:
+        temp = dic[data[0]] + data[1]
+        st += temp
+        dic[start] = temp
+        start += 1
+    return st
+
+io = input("Enter string u want to compress: ")
+
+ans = compress(io)
 print(ans)
+dec = decompression(ans)
+print(dec)
+print (dec == io)
