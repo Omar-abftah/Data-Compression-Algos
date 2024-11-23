@@ -45,6 +45,6 @@ def compress(data):
     codes = generate_huffman_code(tree)
     return ''.join(codes[char] for char in data)
 
-data = "hello I am omar"
+data = str(input("Enter the data you want to compress: "))
 
 print(compress(data))
