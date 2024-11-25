@@ -1,6 +1,7 @@
 
 import heapq
 from collections import Counter
+from bitarray import bitarray
 
 class Node :
     def __init__(self, value, freq):
@@ -45,6 +46,25 @@ def compress(data):
     codes = generate_huffman_code(tree)
     return ''.join(codes[char] for char in data)
 
-data = str(input("Enter the data you want to compress: "))
 
-print(compress(data))
+def saveOutputInFile(compressed_string,file_name):
+    dataInBits = bitarray(compressedString)
+    with open(file_name, "wb") as binary_file:
+        dataInBits.tofile(binary_file)
+
+def readOutputFromFile(file_name):
+    with open(file_name, "rb") as binary_file:
+        bit_data = bitarray()
+        bit_data.fromfile(binary_file)
+        return bit_data
+
+data = str(input("Enter the data you want to compress: "))
+compressedString = compress(data)
+
+file_name = str(input("Enter the name of the output file: "))
+
+saveOutputInFile(compressedString,file_name)
+print(f"Output is saved in {file_name} ")
+
+operation = str(input("Enter Yes if you want to read the file: ")).lower()
+print(readOutputFromFile(file_name).to01() if operation == "yes" else "readOutputFromFile(file_name)")
