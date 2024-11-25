@@ -67,4 +67,4 @@ saveOutputInFile(compressedString,file_name)
 print(f"Output is saved in {file_name} ")
 
 operation = str(input("Enter Yes if you want to read the file: ")).lower()
-print(readOutputFromFile(file_name).to01() if operation == "yes" else "readOutputFromFile(file_name)")
+print(readOutputFromFile(file_name).to01() if operation == "yes" else "")
