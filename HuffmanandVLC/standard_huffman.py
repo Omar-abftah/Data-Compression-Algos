@@ -10,10 +10,12 @@ class Node :
         self.left = None
         self.right = None
     def __lt__(self, other):
+        if self.freq == other.freq:
+            return (self.value or '') < (other.value or '')
         return self.freq < other.freq
 
 def build_frequency(data):
-    return Counter(data)
+   return Counter(data)
 
 def build_huffman_tree(freq_table):
     priority_queue = [Node(char, freq) for char, freq in freq_table.items()]
@@ -27,6 +29,7 @@ def build_huffman_tree(freq_table):
         merged.left = left
         merged.right = right
         heapq.heappush(priority_queue, merged)
+    heapq.heapify(priority_queue)
     return priority_queue[0]
 
 def generate_huffman_code(root):
@@ -38,6 +41,7 @@ def generate_huffman_code(root):
             traverse(node.left, current_code +'0')
             traverse(node.right, current_code +'1')
     traverse(root,'')
+
     return codes
 
 def compress(data):
@@ -48,15 +52,18 @@ def compress(data):
 
 
 def saveOutputInFile(compressed_string,file_name):
-    dataInBits = bitarray(compressedString)
+    dataInBits = bitarray(compressed_string)
     with open(file_name, "wb") as binary_file:
+        binary_file.write(len(compressed_string).to_bytes(4, byteorder='big'))
         dataInBits.tofile(binary_file)
 
 def readOutputFromFile(file_name):
     with open(file_name, "rb") as binary_file:
+        bit_length = int.from_bytes(binary_file.read(4), byteorder='big')
         bit_data = bitarray()
         bit_data.fromfile(binary_file)
-        return bit_data
+        # Truncate the bitarray to the actual length
+        return bit_data[:bit_length]
 
 data = str(input("Enter the data you want to compress: "))
 compressedString = compress(data)
@@ -64,7 +71,7 @@ compressedString = compress(data)
 file_name = str(input("Enter the name of the output file: "))
 
 saveOutputInFile(compressedString,file_name)
-print(f"Output is saved in {file_name} ")
+print(f"Output is saved in {file_name} File ")
 
 operation = str(input("Enter Yes if you want to read the file: ")).lower()
 print(readOutputFromFile(file_name).to01() if operation == "yes" else "")
