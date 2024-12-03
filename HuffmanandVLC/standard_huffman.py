@@ -48,7 +48,22 @@ def compress(data):
     freq_table = build_frequency(data)
     tree = build_huffman_tree(freq_table)
     codes = generate_huffman_code(tree)
-    return ''.join(codes[char] for char in data)
+    return ''.join(codes[char] for char in data), freq_table;
+
+def decompress(compressed_data, freq_table):
+    tree = build_huffman_tree(freq_table)
+    node = tree
+    ans = ''
+    for bit in compressed_data:
+        if bit == '0':
+            node = node.left
+        else:
+            node = node.right
+        if node.left is None and node.right is None:
+            ans += node.value
+            node = tree
+    return ans
+
 
 
 def saveOutputInFile(compressed_string,file_name):
@@ -66,12 +81,14 @@ def readOutputFromFile(file_name):
         return bit_data[:bit_length]
 
 data = str(input("Enter the data you want to compress: "))
-compressedString = compress(data)
+compressedString, freq_tree = compress(data)
 
 file_name = str(input("Enter the name of the output file: "))
 
 saveOutputInFile(compressedString,file_name)
 print(f"Output is saved in {file_name} File ")
+compressedDataFromFile = str(readOutputFromFile(file_name).to01())
 
-operation = str(input("Enter Yes if you want to read the file: ")).lower()
-print(readOutputFromFile(file_name).to01() if operation == "yes" else "")
+print(f"The Compressed String is: {compressedDataFromFile}")
+decompressedData = decompress(compressedDataFromFile, freq_tree)
+print(f"Decompressed String is: {decompressedData}")
