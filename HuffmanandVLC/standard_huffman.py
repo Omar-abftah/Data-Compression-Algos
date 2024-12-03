@@ -84,7 +84,6 @@ data = str(input("Enter the data you want to compress: "))
 compressedString, freq_tree = compress(data)
 
 file_name = str(input("Enter the name of the output file: "))
-
 saveOutputInFile(compressedString,file_name)
 print(f"Output is saved in {file_name} File ")
 compressedDataFromFile = str(readOutputFromFile(file_name).to01())
