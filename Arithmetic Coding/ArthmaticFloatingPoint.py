@@ -1,123 +1,77 @@
 from decimal import Decimal, getcontext
-import typing
 
-getcontext().prec = 100
-
-
-class FloatingPointCodec:
-    def __init__(self, byte_size: int = 1):
-        self.size = byte_size
-
-    def decimal_to_bytes(self, value: Decimal) -> typing.Tuple[int, bytes]:
-        sign, mantissa, exponent = value.as_tuple()
-        binary_representation = sign.to_bytes(1, 'big')
-        binary_representation += exponent.to_bytes(2 * self.size, 'big', signed=True)
-        num_bytes = 1 + 2 * self.size
-
-        for digit in mantissa:
-            binary_representation += digit.to_bytes(1, 'big')
-            num_bytes += 1
-
-        return (num_bytes, binary_representation)
-
-    def bytes_to_decimal(self, value: bytes) -> Decimal:
-        sign = int.from_bytes(value[0:1], 'big')
-        exponent = int.from_bytes(value[1:1 + 2 * self.size], 'big', signed=True)
-
-        digits = [
-            int.from_bytes(value[i:i + 1], 'big')
-            for i in range(1 + 2 * self.size, len(value))
-        ]
-
-        return Decimal((sign, tuple(digits), exponent))
-
-    def encode(self, input_string: str, binary_file: str) -> None:
-        total_chars = len(input_string)
-        frequency_map = {}
-        for char in input_string:
-            frequency_map[char] = frequency_map.get(char, 0) + 1
-
-        start = Decimal(0)
-        range_map = {}
-        for char, count in frequency_map.items():
-            prob = Decimal(count) / total_chars
-            range_map[char] = (start, start + prob)
-            start += prob
-
-        lower, upper = Decimal(0), Decimal(1)
-        for char in input_string:
-            char_range = range_map[char]
-            range_size = upper - lower
-            upper = lower + range_size * char_range[1]
-            lower = lower + range_size * char_range[0]
-
-        encoded = (upper + lower) / 2
-
-        with open(binary_file, 'wb') as f:
-            f.write(total_chars.to_bytes(4, 'big'))
-            f.write(len(range_map).to_bytes(1, 'big'))
-
-            for char, (start, end) in range_map.items():
-                f.write(char.encode('utf-8'))
-
-                start_bytes = self.decimal_to_bytes(start)
-                f.write(start_bytes[0].to_bytes(1, 'big'))
-                f.write(start_bytes[1])
-
-                end_bytes = self.decimal_to_bytes(end)
-                f.write(end_bytes[0].to_bytes(1, 'big'))
-                f.write(end_bytes[1])
-
-            encoded_bytes = self.decimal_to_bytes(encoded)
-            f.write(encoded_bytes[0].to_bytes(1, 'big'))
-            f.write(encoded_bytes[1])
-
-    def decode(self, binary_file: str) -> str:
-        with open(binary_file, 'rb') as f:
-            total_chars = int.from_bytes(f.read(4), 'big')
-            map_range = int.from_bytes(f.read(1), 'big')
-            char_ranges = {}
-
-            for _ in range(map_range):
-                char = f.read(1).decode('utf-8')
-
-                start_bytes_length = int.from_bytes(f.read(1), 'big')
-                start = self.bytes_to_decimal(f.read(start_bytes_length))
-
-                end_bytes_length = int.from_bytes(f.read(1), 'big')
-                end = self.bytes_to_decimal(f.read(end_bytes_length))
-
-                char_ranges[char] = (start, end)
-
-            encoded_bytes_length = int.from_bytes(f.read(1), 'big')
-            encoded_number = self.bytes_to_decimal(f.read(encoded_bytes_length))
-
-            decoded_string = ""
-            for _ in range(total_chars):
-                for char, (low, high) in char_ranges.items():
-                    if low <= encoded_number < high:
-                        decoded_string += char
-                        range_size = high - low
-                        encoded_number = (encoded_number - low) / range_size
-                        break
-
-            return decoded_string
+getcontext().prec = 200
 
 
-def main():
-    input_string = input("Enter the string to be compressed: ")
-
-    codec = FloatingPointCodec()
-    binary_file_name = input("Enter the binary file name: ")
-
-    codec.encode(input_string, binary_file_name)
-    decoded = codec.decode(binary_file_name)
-
-    with open("output.txt", "w") as output_file:
-        output_file.write(decoded)
-
-    print(decoded == input_string)
+def get_frequency(data):
+    frequency_dict = {}
+    for char in data:
+        frequency_dict[char] = frequency_dict.get(char, 0) + 1
+    for key in frequency_dict.keys():
+        frequency_dict[key] = Decimal(frequency_dict[key]) / Decimal(len(data))
+    return frequency_dict
 
 
-if __name__ == "__main__":
-    main()
+def generate_ranges(data):
+    freq = get_frequency(data)
+    start = Decimal(0)
+    dictionary = {}
+    sorted_chars = sorted(freq.keys())
+    for key in sorted_chars:
+        value = freq[key]
+        dictionary[key] = (start, start + value)
+        start += value
+    return dictionary
+
+
+def compress(data, file_name):
+    ranges = generate_ranges(data)
+    low = Decimal(0)
+    high = Decimal(1)
+
+    for char in data:
+        range_width = high - low
+        high = low + range_width * ranges[char][1]
+        low = low + range_width * ranges[char][0]
+
+    compressed_value = (low + high) / 2
+    write_decimal_to_binary(compressed_value, file_name)
+    print(f"The string is compressed in the file {file_name}")
+    return ranges
+
+
+def decompress(float_number, ranges, length):
+    answer = ''
+    cnt = length
+    while cnt > 0:
+        for key in ranges.keys():
+            if ranges[key][0] <= float_number <= ranges[key][1]:
+                answer += key
+                float_number = (float_number - ranges[key][0]) / (ranges[key][1] - ranges[key][0])
+                break
+        cnt -= 1
+    return answer
+
+
+def write_decimal_to_binary(data, filename):
+    with open(filename, 'wb') as file:
+        encoded_data = str(data).encode('utf-8')
+        file.write(encoded_data)
+
+
+def read_decimal_from_binary(filename):
+    with open(filename, 'rb') as file:
+        encoded_data = file.read()
+        return Decimal(encoded_data.decode('utf-8'))
+
+
+string_to_compress = str(input("Enter the string to be compressed: "))
+file_name = input("Enter the file name: ")
+
+ranges = compress(string_to_compress, file_name)
+
+compressed_float = read_decimal_from_binary(file_name)
+print("Compressed value:", compressed_float)
+
+decompressed_string = decompress(compressed_float, ranges, len(string_to_compress))
+print("Decompressed string:", decompressed_string)
